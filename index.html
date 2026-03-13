@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI Health Scanner</title>
+<style>
+body{
+font-family:Arial;
+text-align:center;
+margin-top:100px;
+background:#f2f2f2;
+}
+input,button{
+padding:10px;
+margin:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>AI Health Scanner</h1>
+
+<input id="age" placeholder="Enter Age">
+
+<button onclick="predict()">Check Health Risk</button>
+
+<p id="result"></p>
+
+<script>
+
+async function predict(){
+
+let response = await fetch("https://ai-health-scanner.onrender.com/predict",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+age:document.getElementById("age").value
+})
+});
+
+let data = await response.json();
+
+document.getElementById("result").innerText=data.result;
+
+}
+
+</script>
+
+</body>
+</html>
