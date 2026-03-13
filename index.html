@@ -42,7 +42,7 @@ age:document.getElementById("age").value
 
 let data = await response.json();
 
-document.getElementById("result").innerText=data.result;
+document.getElementById("result").innerText = JSON.stringify(data);
 
 }
 
