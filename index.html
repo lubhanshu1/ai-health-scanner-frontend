@@ -1,52 +1,88 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<title>AI Health Scanner</title>
-<style>
-body{
-font-family:Arial;
-text-align:center;
-margin-top:100px;
-background:#f2f2f2;
-}
-input,button{
-padding:10px;
-margin:10px;
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#020617">
+  <meta name="description" content="AI Health Scanner informational screening demo">
+  <title>AI Health Scanner</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#020617;color:#e2e8f0;font:16px system-ui,sans-serif}
+    main{width:min(620px,100%);padding:clamp(22px,5vw,40px);border:1px solid #24334d;border-radius:22px;background:#0b1225;box-shadow:0 20px 70px #0008}
+    h1{margin-top:0;color:#67e8f9}p{color:#94a3b8;line-height:1.5}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    label{display:grid;gap:6px;color:#cbd5e1;font-size:13px}input{width:100%;min-width:0;padding:12px;border-radius:10px;border:1px solid #334155;background:#071024;color:#fff}
+    button{width:100%;margin-top:18px;padding:13px;border:0;border-radius:10px;background:linear-gradient(100deg,#2563eb,#0891b2);color:white;font-weight:700;cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+    #status{white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;border-radius:10px;background:#071024;min-height:44px}small{color:#94a3b8}
+    @media(max-width:480px){.fields{grid-template-columns:1fr}}
+  </style>
 </head>
-
 <body>
-
-<h1>AI Health Scanner</h1>
-
-<input id="age" placeholder="Enter Age">
-
-<button onclick="predict()">Check Health Risk</button>
-
-<p id="result"></p>
-
+<main>
+  <h1>AI Health Scanner</h1>
+  <p>Enter all required values to run the basic screening endpoint. This tool is informational only and does not provide a diagnosis.</p>
+  <form id="screening-form">
+    <div class="fields">
+      <label>Age (years)<input id="age" type="number" min="1" max="120" required></label>
+      <label>Glucose (mg/dL)<input id="glucose" type="number" min="1" max="1000" required></label>
+      <label>Blood pressure (mmHg)<input id="bp" type="number" min="1" max="300" required></label>
+      <label>BMI<input id="bmi" type="number" min="1" max="100" step="0.1" required></label>
+    </div>
+    <button id="submit" type="submit">Run screening</button>
+  </form>
+  <p id="status" role="status" aria-live="polite">Sign in first if the API requires authentication.</p>
+  <label>Access token (stored locally only)<input id="token" type="password" autocomplete="off" placeholder="Paste your JWT access token"></label>
+  <p><small>API URL defaults to the current origin. Set <code>window.HEALTH_API_URL</code> before this script if your API is hosted separately.</small></p>
+</main>
 <script>
-
-async function predict(){
-
-let response = await fetch("https://ai-health-scanner.onrender.com/predict",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-age:document.getElementById("age").value
-})
-});
-
-let data = await response.json();
-
-document.getElementById("result").innerText = JSON.stringify(data);
-
-}
-
+(() => {
+  const form = document.getElementById("screening-form");
+  const button = document.getElementById("submit");
+  const status = document.getElementById("status");
+  const tokenInput = document.getElementById("token");
+  const apiBase = String(window.HEALTH_API_URL || window.location.origin).replace(/\/$/, "");
+  tokenInput.value = sessionStorage.getItem("healthScannerToken") || "";
+  tokenInput.addEventListener("change", () => {
+    sessionStorage.setItem("healthScannerToken", tokenInput.value.trim());
+  });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const payload = {};
+    for (const key of ["age", "glucose", "bp", "bmi"]) {
+      const value = Number(document.getElementById(key).value);
+      if (!Number.isFinite(value) || value <= 0) {
+        status.textContent = "Please enter valid positive numbers for every field.";
+        return;
+      }
+      payload[key] = value;
+    }
+    button.disabled = true;
+    status.textContent = "Running screening…";
+    try {
+      const headers = {"Content-Type": "application/json"};
+      const token = tokenInput.value.trim();
+      if (token) headers.Authorization = "Bearer " + token;
+      const response = await fetch(apiBase + "/predict", {
+        method: "POST", headers, body: JSON.stringify(payload)
+      });
+      let data;
+      try { data = await response.json(); }
+      catch { throw new Error("The server returned an unreadable response (HTTP " + response.status + ")."); }
+      if (!response.ok) {
+        const detail = typeof data.detail === "string" ? data.detail :
+          Array.isArray(data.detail) ? data.detail.map(x => x.msg || "Invalid input").join("; ") :
+          "Request failed (HTTP " + response.status + ").";
+        throw new Error(detail);
+      }
+      status.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      status.textContent = "Could not complete screening: " + (error.message || "Network error") +
+        "\nCheck the API URL, backend availability, and authentication.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+})();
 </script>
-
 </body>
 </html>
