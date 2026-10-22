@@ -31,7 +31,7 @@
   </form>
   <p id="status" role="status" aria-live="polite">Sign in first if the API requires authentication.</p>
   <label>Access token (stored locally only)<input id="token" type="password" autocomplete="off" placeholder="Paste your JWT access token"></label>
-  <p><small>API URL defaults to the current origin. Set <code>window.HEALTH_API_URL</code> before this script if your API is hosted separately.</small></p>
+  <p><small>API URL defaults to the configured Render backend. You can override it by setting <code>window.HEALTH_API_URL</code> before this script.</small></p>
 </main>
 <script>
 (() => {
@@ -39,7 +39,7 @@
   const button = document.getElementById("submit");
   const status = document.getElementById("status");
   const tokenInput = document.getElementById("token");
-  const apiBase = String(window.HEALTH_API_URL || window.location.origin).replace(/\/$/, "");
+  const apiBase = String(window.HEALTH_API_URL || "https://ai-health-backend-g329.onrender.com").replace(/\/$/, "");
   tokenInput.value = sessionStorage.getItem("healthScannerToken") || "";
   tokenInput.addEventListener("change", () => {
     sessionStorage.setItem("healthScannerToken", tokenInput.value.trim());
